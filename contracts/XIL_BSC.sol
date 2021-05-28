@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./Interfaces.sol";
 
-contract XILToken is Context, IBEP20, Ownable {
+contract XIL_BSC is Context, IBEP20, Ownable {
     
     using SafeMath for uint256;
     

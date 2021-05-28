@@ -5,7 +5,7 @@ describe("Token", async () => {
   const NAME = "XIL"
   const SYMBOL = "XIL"
   beforeEach(async () => {
-    Token = await ethers.getContractFactory("XILToken")
+    Token = await ethers.getContractFactory("XIL_ETH")
     token = await Token.deploy()
   })
   describe("Checking correct deployment", () => {
