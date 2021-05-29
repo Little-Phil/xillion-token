@@ -16,6 +16,11 @@ contract XIL_BSC is Context, IBEP20, Ownable {
     string private _symbol;
     string private _name;
     
+    struct TransferData{
+        address recipient;
+        uint amount;
+    }
+
     constructor() {
         _name = "XIL";
         _symbol = "XIL";
@@ -24,6 +29,16 @@ contract XIL_BSC is Context, IBEP20, Ownable {
         _balances[_msgSender()] = _totalSupply;
         
         emit Transfer(address(0), _msgSender(), _totalSupply);
+    }
+
+    /**
+    * @dev loops though an array "data" of TransferData
+    * and makes "data.length" transactions
+    */
+    function batchTransfer(TransferData[] calldata data) external {
+        for (uint i = 0; i < data.length; i++) {
+            _transfer(msg.sender, data[i].recipient, data[i].amount);
+        }
     }
 
     /**
