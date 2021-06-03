@@ -327,3 +327,11 @@ library SafeMath {
     return a % b;
   }
 }
+
+interface ILocker{
+  /**
+   * @dev fails if transaction is not allowed.
+   * Return values can be ignored for AntiBot launches
+   */
+  function lockOrGetPenalty(address source, address dest) external returns (bool, uint256);
+}
