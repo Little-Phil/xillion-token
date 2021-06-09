@@ -22,6 +22,10 @@ module.exports = {
       url: process.env.RINKEBY_ALCHEMY_KEY,
       accounts: { mnemonic: process.env.MY_MNEMONIC },
     },
+    ropsten: {
+      url: process.env.ROPSTEN_INFURA_KEY,
+      accounts: { mnemonic: process.env.MY_MNEMONIC },
+    },
     testBSC: {
       url: "https://data-seed-prebsc-1-s1.binance.org:8545/",
       accounts: { mnemonic: process.env.MY_MNEMONIC },

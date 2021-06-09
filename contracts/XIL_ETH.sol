@@ -27,13 +27,13 @@ contract XIL_ETH is Context, IBEP20, Ownable {
         _name = "XIL";
         _symbol = "XIL";
         _decimals = 18;
-        // _totalSupply = 0;
+        _totalSupply = 250000000 * 10 ** 18;
         _balances[_msgSender()] = _totalSupply;
         
         emit Transfer(address(0), _msgSender(), _totalSupply);
     }
 
-    function setLocker(address _locker) external OnlyOwner{
+    function setLocker(address _locker) external onlyOwner{
         locker = ILocker(_locker);
     }
 
