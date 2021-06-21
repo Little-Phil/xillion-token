@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./Interfaces.sol";
 
-contract XIL_BSC is Context, IBEP20, Ownable {
+contract XIL_BSC is Context, IBEP20, Ownable, LGEWhitelisted {
     
     using SafeMath for uint256;
     
@@ -187,6 +187,8 @@ contract XIL_BSC is Context, IBEP20, Ownable {
         require(sender != address(0), "BEP20: transfer from the zero address");
         require(recipient != address(0), "BEP20: transfer to the zero address");
         
+        _applyLGEWhitelist(sender, recipient, amount);
+
         _balances[sender] = _balances[sender].sub(amount, "BEP20: transfer amount exceeds balance");
         _balances[recipient] = _balances[recipient].add(amount);
         emit Transfer(sender, recipient, amount);
