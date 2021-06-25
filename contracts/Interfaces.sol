@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-interface IBEP20 {
+interface ITOKEN20 {
   /**
    * @dev Returns the amount of tokens in existence.
    */
@@ -91,6 +91,11 @@ interface IBEP20 {
    */
   event Approval(address indexed owner, address indexed spender, uint256 value);
 }
+
+interface IBEP20 is ITOKEN20 {}
+
+interface IERC20 is ITOKEN20 {}
+
 
 /*
  * @dev Provides information about the current execution context, including the
