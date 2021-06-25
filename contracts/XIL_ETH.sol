@@ -11,8 +11,6 @@ contract XIL_ETH is Context, IBEP20, Ownable {
     
     mapping (address => mapping (address => uint256)) private _allowances;
     
-    ILocker public locker;
-
     uint256 private _totalSupply;
     uint8 private _decimals;
     string private _symbol;
@@ -31,10 +29,6 @@ contract XIL_ETH is Context, IBEP20, Ownable {
         _balances[_msgSender()] = _totalSupply;
         
         emit Transfer(address(0), _msgSender(), _totalSupply);
-    }
-
-    function setLocker(address _locker) external onlyOwner{
-        locker = ILocker(_locker);
     }
 
     /**
@@ -192,9 +186,6 @@ contract XIL_ETH is Context, IBEP20, Ownable {
     function _transfer(address sender, address recipient, uint256 amount) internal {
         require(sender != address(0), "BEP20: transfer from the zero address");
         require(recipient != address(0), "BEP20: transfer to the zero address");
-        if (address(locker) != address(0)) {
-            locker.lockOrGetPenalty(sender, recipient);
-        }
         _balances[sender] = _balances[sender].sub(amount, "BEP20: transfer amount exceeds balance");
         _balances[recipient] = _balances[recipient].add(amount);
         emit Transfer(sender, recipient, amount);
