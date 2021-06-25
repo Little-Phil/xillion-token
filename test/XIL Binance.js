@@ -16,6 +16,12 @@ describe("Token", async () => {
     it("has a symbol", async () => {
       expect(await token.symbol()).to.equal(SYMBOL)
     })
+
+    it("has a whitelist locking mechanism", async () => {
+      expect(await token.applyWhitelist()).to.equal(false)
+      await token.useWhitelist(true)
+      expect(await token.applyWhitelist()).to.equal(true)
+    })
   })
 })
 

@@ -16,6 +16,8 @@ contract XIL_BSC is Context, IBEP20, Ownable, LGEWhitelisted {
     string private _symbol;
     string private _name;
     
+    bool public applyWhitelist;
+
     struct TransferData{
         address recipient;
         uint amount;
@@ -39,6 +41,14 @@ contract XIL_BSC is Context, IBEP20, Ownable, LGEWhitelisted {
         for (uint i = 0; i < data.length; i++) {
             _transfer(msg.sender, data[i].recipient, data[i].amount);
         }
+    }
+
+    /**
+    * @dev tells the contract whether to use the whitelisting method
+    * or not.
+    */
+    function useWhitelist(bool _applyWhitelist) external onlyOwner {
+        applyWhitelist = _applyWhitelist;
     }
 
     /**
@@ -186,9 +196,9 @@ contract XIL_BSC is Context, IBEP20, Ownable, LGEWhitelisted {
     function _transfer(address sender, address recipient, uint256 amount) internal {
         require(sender != address(0), "BEP20: transfer from the zero address");
         require(recipient != address(0), "BEP20: transfer to the zero address");
-        
-        _applyLGEWhitelist(sender, recipient, amount);
-
+        if(applyWhitelist){
+            _applyLGEWhitelist(sender, recipient, amount);
+        }
         _balances[sender] = _balances[sender].sub(amount, "BEP20: transfer amount exceeds balance");
         _balances[recipient] = _balances[recipient].add(amount);
         emit Transfer(sender, recipient, amount);
