@@ -15,11 +15,13 @@ describe("Token", async () => {
   let addr1;
   let addr2;
   let addr3;
+  let treasury;
+  let pairAddress;
   let addrs;
 
   beforeEach(async () => {
     Token = await ethers.getContractFactory("XIL_BSC");
-    [owner, addr1, addr2, addr3, ...addrs] = await ethers.getSigners();
+    [owner, addr1, addr2, addr3, treasury, pairAddress, ...addrs] = await ethers.getSigners();
 
     token = await Token.deploy();
   })
@@ -66,11 +68,42 @@ describe("Token", async () => {
 
 
   describe("Checking Ownership", () => {
-    it("Should transfer tokens between accounts", async () => {
-      // TODO test ownership and set owner function and transfer
-      let test = "notyetstarted"
+
+    describe('transfer ownership', () => {
+      it('changes owner after transfer', async () => {
+        await expect(token.transferOwnership(treasury.address)).to.emit(token, 'OwnershipTransferred')
+          .withArgs(owner.address, treasury.address);
+        expect(await token.owner()).to.equal(treasury.address);
+      });
+
+      it('prevents non-owners from transferring', async function () {
+        await expect(
+          token.connect(addr1).transferOwnership(treasury.address)
+        ).to.be.revertedWith("caller is not the owner");
+      });
+
+      it('guards ownership against stuck state', async function () {
+        await expect(
+          token.transferOwnership(AddressZero)
+        ).to.be.revertedWith("new owner is the zero address");
+      });
     });
 
+    describe('renounce ownership', () => {
+      it('renounce owner', async () => {
+        await expect(token.renounceOwnership()).to.emit(token, 'OwnershipTransferred')
+          .withArgs(owner.address, AddressZero);
+        expect(await token.owner()).to.equal(AddressZero);
+      });
+
+      it('renounce non owner', async () => {
+        await expect(
+          token.connect(addr1).renounceOwnership()
+        ).to.be.revertedWith("caller is not the owner");
+
+        expect(await token.owner()).to.equal(owner.address);
+      });
+    });
   });
 
   describe("Transfer - Whitelist DEFAULT OFF", () => {
@@ -134,6 +167,15 @@ describe("Token", async () => {
 
       const addr2Balance = await token.balanceOf(addr2.address);
       expect(addr2Balance).to.equal(50);
+    });
+
+    it("Should batch transfer tokens between accounts", async () => {
+      // Batvh Transfer tokens to addr1  addr2 and addr3
+      const batchTransferData = [{"recipient":addr1.address, "amount": 50},{"recipient":addr2.address,"amount": 150},{"recipient":addr3.address,"amount": 250}]
+      await token.batchTransfer(batchTransferData);
+      expect(await token.balanceOf(addr1.address)).to.equal(50);
+      expect(await token.balanceOf(addr2.address)).to.equal(150);
+      expect(await token.balanceOf(addr3.address)).to.equal(250);
     });
   });
 
@@ -285,12 +327,10 @@ describe("Token", async () => {
 
     beforeEach(async () => {
       await token.useWhitelist(true);
-      let whitelistData = [
-        {
-          "testdata": "hey"
-        }
-      ]
-      // await token.createLGEWhitelist()
+      const durations = [1200];
+      const amountsMax = [1000];
+
+      await token.createLGEWhitelist(pairAddress.address, durations, amountsMax);
     })
 
     it("Should transfer tokens between accounts", async () => {
