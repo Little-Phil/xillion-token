@@ -1,5 +1,7 @@
+
 const { expect } = require("chai");
 const { BigNumber } = require("@ethersproject/bignumber");
+const { AddressZero } = require("@ethersproject/constants");
 
 describe("Token", async () => {
   let Token, token;
@@ -18,6 +20,7 @@ describe("Token", async () => {
   beforeEach(async () => {
     Token = await ethers.getContractFactory("XIL_BSC");
     [owner, addr1, addr2, addr3, ...addrs] = await ethers.getSigners();
+
     token = await Token.deploy();
   })
 
@@ -134,6 +137,34 @@ describe("Token", async () => {
     });
   });
 
+  describe('when the recipient is the zero address (TOKEN IS NOT BURNABLE)', () => {
+    beforeEach(async () => {
+        let spender = addr2;
+        let tokenOwner = owner;
+        const initialSupply = 250000000;
+        // Owner (default user) approves the spender to spend initialSupply
+        await token.approve(spender.address, initialSupply);
+    });
+
+    it('reverts transferFrom', async () => {
+      const amount = 123456
+      let tokenOwner = owner;
+      let spender = addr2;
+      await expect(
+        token.connect(spender).transferFrom(tokenOwner.address, AddressZero, amount)
+      ).to.be.revertedWith("transfer to the zero address");
+    });
+
+    it('reverts transfer', async () => {
+      const amount = 123456
+      let tokenOwner = owner;
+      let spender = addr2;
+      await expect(
+        token.transfer(AddressZero, amount)
+      ).to.be.revertedWith("transfer to the zero address");
+    });
+  });
+
   describe("Approvals - Whitelist DEFAULT OFF", () => {
     describe('when the spender has enough approved balance', () => {
 
@@ -224,7 +255,7 @@ describe("Token", async () => {
   });
 
   describe("Transactions - Whitelist ENABLED but EMPTY", () => {
-    // Should be the same as no white list (but reduced gas costs)
+    // Should be the same as no white list (but higher gas costs)
 
     beforeEach(async () => {
       await token.useWhitelist(true);
@@ -259,8 +290,7 @@ describe("Token", async () => {
           "testdata": "hey"
         }
       ]
-
-
+      // await token.createLGEWhitelist()
     })
 
     it("Should transfer tokens between accounts", async () => {
