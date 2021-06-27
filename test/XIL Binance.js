@@ -470,6 +470,73 @@ describe("Checking WhiteLister controls", () => {
       await expect(token.connect(idoAddr).transfer(addr3.address, 1000)).to.not.be.reverted;
     });
 
+    it("whitelist modification testing", async () => {
+
+      // Array length, is the number of rounds.
+      let durations = [1200000]; //time in seconds
+      let amountsMax = [1000000]; //tokens available
+
+      // number of durations and amounts need to match (set white list on this address (only one address for whitelisting transfers))
+      await token.connect(idoAddr).createLGEWhitelist(idoAddr.address, durations, amountsMax);
+
+      // Set who can access the whitelist round
+      let addresses = [pairAddr.address, idoAddr.address, owner.address, addr1.address, addr2.address];
+      await token.connect(idoAddr).modifyLGEWhitelist(0, 1200, 50000000, addresses, true);
+
+      // activate LGE (ido account can enableß)
+      await token.connect(idoAddr).transferFrom(owner.address, idoAddr.address, 1000000);
+
+      // console.log("getLGEWhitelistRound", await token.getLGEWhitelistRound());
+      // Does a valid whitelist transaction
+      await token.connect(idoAddr).transfer(addr2.address, 1000)
+      expect(await token.balanceOf(addr2.address)).to.equal(1000);
+
+      // Whitelisting only applies to the idoAdd address
+      await expect(token.connect(idoAddr).transfer(addr3.address, 1000)).to.be.revertedWith("Buyer is not whitelisted");
+      
+      // other accounts can still transfer
+      await expect(token.connect(addr2).transfer(addr3.address, 100)).to.not.be.reverted;
+      await expect(token.transfer(addr3.address, 100)).to.not.be.reverted;
+
+      // Set who can access the whitelist round (turn off access to addr2)
+      addresses = [addr2.address];
+      await token.connect(idoAddr).modifyLGEWhitelist(0, 1200, 50000000, addresses, false);
+
+       // Whitelisting only applies to the idoAdd address
+      await expect(token.connect(idoAddr).transfer(addr1.address, 1000)).to.not.be.reverted;
+      await expect(token.connect(idoAddr).transfer(addr2.address, 1000)).to.be.revertedWith("Buyer is not whitelisted");
+      await expect(token.connect(idoAddr).transfer(addr3.address, 1000)).to.be.revertedWith("Buyer is not whitelisted");
+    });
+
+    it("whitelist amountsMax spending testing", async () => {
+
+      // Array length, is the number of rounds.
+      let durations = [1200]; //time in seconds
+      let amountsMax = [150]; //tokens available
+
+      // number of durations and amounts need to match (set white list on this address (only one address for whitelisting transfers))
+      await token.connect(idoAddr).createLGEWhitelist(idoAddr.address, durations, amountsMax);
+
+      // Set who can access the whitelist round
+      let addresses = [pairAddr.address, idoAddr.address, owner.address, addr1.address, addr2.address];
+      await token.connect(idoAddr).modifyLGEWhitelist(0, 1200, 150, addresses, true);
+      // activate LGE (ido account can enableß)
+      await token.connect(idoAddr).transferFrom(owner.address, idoAddr.address, 1000000);
+
+      await expect(token.connect(idoAddr).transfer(addr1.address, 1000)).to.be.revertedWith("Amount exceeds whitelist maximum");
+       await expect(token.connect(idoAddr).transfer(addr1.address, 100)).to.not.be.reverted;
+
+      addresses = [addr2.address]; 
+      await token.connect(idoAddr).modifyLGEWhitelist(0, 1200, 500, addresses, true);
+      // 100 + 300 < 500
+      await expect(token.connect(idoAddr).transfer(addr1.address, 200)).to.not.be.reverted;
+       // 100 + 300 > 300 (so no more transactions)
+      await token.connect(idoAddr).modifyLGEWhitelist(0, 1200, 300, addresses, true);
+      await expect(token.connect(idoAddr).transfer(addr1.address, 20)).to.be.revertedWith("Amount exceeds whitelist maximum");
+
+    });
+
+
   });
 
 });
