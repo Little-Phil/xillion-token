@@ -15,13 +15,13 @@ describe("Token", async () => {
   let addr1;
   let addr2;
   let addr3;
-  let treasury;
-  let pairAddress;
+  let treasuryAddr;
+  let pairAddr;
   let addrs;
 
   beforeEach(async () => {
     Token = await ethers.getContractFactory("XIL_ETH");
-    [owner, addr1, addr2, addr3, treasury, pairAddress, ...addrs] = await ethers.getSigners();
+    [owner, addr1, addr2, addr3, treasuryAddr, pairAddr, ...addrs] = await ethers.getSigners();
 
     token = await Token.deploy();
   })
@@ -61,14 +61,14 @@ describe("Token", async () => {
 
     describe('transfer ownership', () => {
       it('changes owner after transfer', async () => {
-        await expect(token.transferOwnership(treasury.address)).to.emit(token, 'OwnershipTransferred')
-          .withArgs(owner.address, treasury.address);
-        expect(await token.owner()).to.equal(treasury.address);
+        await expect(token.transferOwnership(treasuryAddr.address)).to.emit(token, 'OwnershipTransferred')
+          .withArgs(owner.address, treasuryAddr.address);
+        expect(await token.owner()).to.equal(treasuryAddr.address);
       });
 
       it('prevents non-owners from transferring', async function () {
         await expect(
-          token.connect(addr1).transferOwnership(treasury.address)
+          token.connect(addr1).transferOwnership(treasuryAddr.address)
         ).to.be.revertedWith("caller is not the owner");
       });
 
