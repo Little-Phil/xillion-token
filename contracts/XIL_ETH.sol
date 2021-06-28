@@ -44,7 +44,7 @@ contract XIL_ETH is Context, IERC20, Ownable {
     /**
     * @dev Returns the bep token owner.
     */
-    function getOwner() external view override returns (address) {
+    function getOwner() external view returns (address) {
         return owner();
     }
     
