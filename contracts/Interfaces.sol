@@ -23,11 +23,6 @@ interface ITOKEN20 {
   function name() external view returns (string memory);
 
   /**
-   * @dev Returns the bep token owner.
-   */
-  function getOwner() external view returns (address);
-
-  /**
    * @dev Returns the amount of tokens owned by `account`.
    */
   function balanceOf(address account) external view returns (uint256);
@@ -92,7 +87,12 @@ interface ITOKEN20 {
   event Approval(address indexed owner, address indexed spender, uint256 value);
 }
 
-interface IBEP20 is ITOKEN20 {}
+interface IBEP20 is ITOKEN20 {
+   /**
+   * @dev Returns the bep token owner.
+   */
+  function getOwner() external view returns (address);
+}
 
 interface IERC20 is ITOKEN20 {}
 
