@@ -1,5 +1,5 @@
 {
-  "name": "hardhat-project",
+  "name": "@xillion/token",
   "version": "1.0.0",
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
