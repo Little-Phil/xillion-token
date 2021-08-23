@@ -571,4 +571,27 @@ describe("Token", async () => {
       )
     })
   })
+
+  describe("Token burning", () => {
+    it("Should burn token decreasing supply", async () => {
+      const startTotalSupply = await token.totalSupply()
+      const startBalance = await token.balanceOf(owner.address)
+
+      const amountOfTokens = BigNumber.from("100000")
+      await token.burn(amountOfTokens)
+
+      const endTotalSupply = await token.totalSupply()
+      const endBalance = await token.balanceOf(owner.address)
+
+      expect(endTotalSupply).to.equal(startTotalSupply.sub(amountOfTokens))
+      expect(endBalance).to.equal(startBalance.sub(amountOfTokens))
+    })
+
+    it("Should prevent token burning when the caller does not have funds to burn", async () => {
+      const amountOfTokens = BigNumber.from("100000")
+      await expect(token.connect(addr1).burn(amountOfTokens)).to.be.revertedWith(
+        "BEP20: burn amount exceeds balance"
+      )
+    })
+  })
 })
