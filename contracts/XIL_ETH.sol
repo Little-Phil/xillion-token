@@ -7,6 +7,8 @@ contract XIL_ETH is Context, IERC20, Ownable {
     
     using SafeMath for uint256;
     
+    event Burn(address indexed from, uint256 value);
+
     mapping (address => uint256) private _balances;
     
     mapping (address => mapping (address => uint256)) private _allowances;
@@ -212,5 +214,19 @@ contract XIL_ETH is Context, IERC20, Ownable {
         emit Approval(owner, spender, amount);
     }
     
+    /**
+    * @dev Burn `amount` tokens from msg.sender
+    *
+    * Emits a {Burn} event.
+    *
+    * Requirements:
+    *
+    * - `sender` must have a balance of at least `amount`.
+    */
+    function burn(uint256 amount) external {
+        _balances[msg.sender] = _balances[msg.sender].sub(amount, "BEP20: burn amount exceeds balance");
+        _totalSupply = _totalSupply.sub(amount);
+        emit Burn(msg.sender, amount);
+    }
 }
 
