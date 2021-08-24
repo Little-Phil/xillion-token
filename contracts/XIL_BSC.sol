@@ -7,8 +7,6 @@ contract XIL_BSC is Context, IBEP20, Ownable, LGEWhitelisted {
     
     using SafeMath for uint256;
     
-    event Burn(address indexed from, uint256 value);
-    
     mapping (address => uint256) private _balances;
     
     mapping (address => mapping (address => uint256)) private _allowances;
@@ -230,16 +228,49 @@ contract XIL_BSC is Context, IBEP20, Ownable, LGEWhitelisted {
     /**
     * @dev Burn `amount` tokens from msg.sender
     *
-    * Emits a {Burn} event.
+    * Emits a {Transfer} event.
     *
     * Requirements:
     *
     * - `sender` must have a balance of at least `amount`.
     */
     function burn(uint256 amount) external {
-        _balances[msg.sender] = _balances[msg.sender].sub(amount, "BEP20: burn amount exceeds balance");
-        _totalSupply = _totalSupply.sub(amount);
-        emit Burn(msg.sender, amount);
+        _burn(_msgSender(), amount);
+    }
+
+    /**
+    * @dev Burn `amount` tokens from sender if allowed
+    *
+    * Emits an {Approval} event indicating the updated allowance.
+    *
+    * Requirements:
+    * - `sender` cannot be the zero address.
+    * - `sender` must have a balance of at least `amount`.
+    * - the caller must have allowance for `sender`'s tokens of at least
+    * `amount`.
+    */
+    function burnFrom(address sender, uint256 amount) external returns (bool) {
+        _burn(sender, amount);
+        _approve(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "BEP20: burn amount exceeds allowance"));
+        return true;
+    }
+
+    /**
+    * @dev Burn `amount` tokens from account
+    *
+    * Internal function to centralize the burning of tokens. Emits a {Transfer} event.
+    *
+    * Requirements:
+    *
+    * - `sender` must have a balance of at least `amount`.
+    */
+    function _burn(address account, uint256 amount) internal virtual {
+        require(account != address(0), "ERC20: burn from the zero address");
+        _balances[account] = _balances[account].sub(amount, "BEP20: burn amount exceeds balance");
+        unchecked {
+            _totalSupply = _totalSupply - amount;
+        }
+        emit Transfer(account, address(0), amount);
     }
 }
 

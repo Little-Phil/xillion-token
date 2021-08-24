@@ -313,5 +313,27 @@ describe("Token", async () => {
         "BEP20: burn amount exceeds balance"
       )
     })
+
+    it("Should allow burning from an authorized third party", async () => {
+      const startTotalSupply = await token.totalSupply()
+      const startBalance = await token.balanceOf(owner.address)
+
+      const amountOfTokens = BigNumber.from("100000")
+      await token.approve(addr1.address, amountOfTokens)
+      await token.connect(addr1).burnFrom(owner.address, amountOfTokens)
+
+      const endTotalSupply = await token.totalSupply()
+      const endBalance = await token.balanceOf(owner.address)
+
+      expect(endTotalSupply).to.equal(startTotalSupply.sub(amountOfTokens))
+      expect(endBalance).to.equal(startBalance.sub(amountOfTokens))
+    })
+
+    it("Should prevent burning from an unauthorized third party", async () => {
+      const amountOfTokens = BigNumber.from("100000")
+      await expect(token.connect(addr1).burnFrom(owner.address, amountOfTokens)).to.be.revertedWith(
+        "BEP20: burn amount exceeds allowance"
+      )
+    })
   })
 })
