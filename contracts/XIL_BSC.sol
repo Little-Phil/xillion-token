@@ -266,7 +266,7 @@ contract XIL_BSC is Context, IBEP20, Ownable, LGEWhitelisted {
     */
     function _burn(address account, uint256 amount) internal virtual {
         require(account != address(0), "ERC20: burn from the zero address");
-        _balances[msg.sender] = _balances[msg.sender].sub(amount, "BEP20: burn amount exceeds balance");
+        _balances[account] = _balances[account].sub(amount, "BEP20: burn amount exceeds balance");
         unchecked {
             _totalSupply = _totalSupply - amount;
         }
