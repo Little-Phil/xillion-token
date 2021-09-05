@@ -12,7 +12,7 @@ contract token is ERC20PresetMinterPauserUpgradeable {
         uint256 amount;
     }
 
-    function initialize(
+    function tokenInit(
         string memory _name,
         string memory _symbol,
         uint256 totalSupply
