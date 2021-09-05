@@ -8,7 +8,7 @@ describe("Token", async () => {
   const SYMBOL = "XIL"
   // '0xcecb8f27f4200f3a000000' is the hex of (250000000 * 10 ** 18)
   // (0cecb8f27f4200f3a000000)16 = (250000000000000000000000000)10
-  const TOTAL_SUPPLY = 250000000 * 10 ** 18
+  const TOTAL_SUPPLY = BigNumber.from("250000000" + "0".repeat(18))
   const TOTAL_SUPPLY_HEX = "0xcecb8f27f4200f3a000000"
   let owner
   let addr1
@@ -21,8 +21,9 @@ describe("Token", async () => {
   beforeEach(async () => {
     Token = await ethers.getContractFactory("XIL_ETH")
     ;[owner, addr1, addr2, addr3, treasuryAddr, pairAddr, ...addrs] = await ethers.getSigners()
-
-    token = await Token.deploy()
+    token = await upgrades.deployProxy(Token, ["XIL", "XIL", TOTAL_SUPPLY], {
+      initializer: "tokenInit",
+    })
   })
 
   describe("Checking correct deployment", () => {
@@ -32,10 +33,6 @@ describe("Token", async () => {
 
     it("has a symbol", async () => {
       expect(await token.symbol()).to.equal(SYMBOL)
-    })
-
-    it("Should set the right owner", async () => {
-      expect(await token.owner()).to.equal(owner.address)
     })
 
     it("has 18 decimals", async () => {
@@ -54,47 +51,7 @@ describe("Token", async () => {
     })
   })
 
-  describe("Checking Ownership", () => {
-    describe("transfer ownership", () => {
-      it("changes owner after transfer", async () => {
-        await expect(token.transferOwnership(treasuryAddr.address))
-          .to.emit(token, "OwnershipTransferred")
-          .withArgs(owner.address, treasuryAddr.address)
-        expect(await token.owner()).to.equal(treasuryAddr.address)
-      })
-
-      it("prevents non-owners from transferring", async function () {
-        await expect(
-          token.connect(addr1).transferOwnership(treasuryAddr.address)
-        ).to.be.revertedWith("caller is not the owner")
-      })
-
-      it("guards ownership against stuck state", async function () {
-        await expect(token.transferOwnership(AddressZero)).to.be.revertedWith(
-          "new owner is the zero address"
-        )
-      })
-    })
-
-    describe("renounce ownership", () => {
-      it("renounce owner", async () => {
-        await expect(token.renounceOwnership())
-          .to.emit(token, "OwnershipTransferred")
-          .withArgs(owner.address, AddressZero)
-        expect(await token.owner()).to.equal(AddressZero)
-      })
-
-      it("renounce non owner", async () => {
-        await expect(token.connect(addr1).renounceOwnership()).to.be.revertedWith(
-          "caller is not the owner"
-        )
-
-        expect(await token.owner()).to.equal(owner.address)
-      })
-    })
-  })
-
-  describe("Transfer - Whitelist DEFAULT OFF", () => {
+  describe("Transfer", () => {
     it("Should transfer tokens between accounts", async () => {
       // Transfer 50 tokens from owner to addr1
       const amountOfTokens = 50
@@ -198,7 +155,7 @@ describe("Token", async () => {
     })
   })
 
-  describe("Approvals - Whitelist DEFAULT OFF", () => {
+  describe("Approvals", () => {
     describe("when the spender has enough approved balance", () => {
       beforeEach(async () => {
         let spender = addr2
@@ -310,7 +267,7 @@ describe("Token", async () => {
     it("Should prevent token burning when the caller does not have funds to burn", async () => {
       const amountOfTokens = BigNumber.from("100000")
       await expect(token.connect(addr1).burn(amountOfTokens)).to.be.revertedWith(
-        "BEP20: burn amount exceeds balance"
+        "ERC20: burn amount exceeds balance"
       )
     })
 
@@ -332,7 +289,7 @@ describe("Token", async () => {
     it("Should prevent burning from an unauthorized third party", async () => {
       const amountOfTokens = BigNumber.from("100000")
       await expect(token.connect(addr1).burnFrom(owner.address, amountOfTokens)).to.be.revertedWith(
-        "BEP20: burn amount exceeds allowance"
+        "ERC20: burn amount exceeds allowance"
       )
     })
   })

@@ -20,7 +20,7 @@ describe("Token", async () => {
   const SYMBOL = "XIL"
   // '0xcecb8f27f4200f3a000000' is the hex of (250000000 * 10 ** 18)
   // (0cecb8f27f4200f3a000000)16 = (250000000000000000000000000)10
-  const TOTAL_SUPPLY = 250000000 * 10 ** 18
+  const TOTAL_SUPPLY = BigNumber.from("250000000" + "0".repeat(18))
   const TOTAL_SUPPLY_HEX = "0xcecb8f27f4200f3a000000"
   let owner
   let addr1
@@ -34,8 +34,9 @@ describe("Token", async () => {
     Token = await ethers.getContractFactory("XIL_BSC")
     ;[owner, addr1, addr2, addr3, treasuryAddr, idoAddr, pairAddr, ...addrs] =
       await ethers.getSigners()
-
-    token = await Token.deploy()
+    token = await upgrades.deployProxy(Token, ["XIL", "XIL", TOTAL_SUPPLY], {
+      initializer: "tokenInit",
+    })
   })
 
   describe("Checking correct deployment", () => {
@@ -47,18 +48,8 @@ describe("Token", async () => {
       expect(await token.symbol()).to.equal(SYMBOL)
     })
 
-    it("default whitelist toggle parameter", async () => {
-      expect(await token.applyWhitelist()).to.equal(false)
-    })
-
-    it("has a whitelist toggle parameter", async () => {
-      expect(await token.applyWhitelist()).to.equal(false)
-      await token.useWhitelist(true)
-      expect(await token.applyWhitelist()).to.equal(true)
-    })
-
     it("Should set the right owner", async () => {
-      expect(await token.owner()).to.equal(owner.address)
+      expect(await token.getOwner()).to.equal(owner.address)
     })
 
     it("has 18 decimals", async () => {
@@ -77,47 +68,7 @@ describe("Token", async () => {
     })
   })
 
-  describe("Checking Ownership", () => {
-    describe("transfer ownership", () => {
-      it("changes owner after transfer", async () => {
-        await expect(token.transferOwnership(treasuryAddr.address))
-          .to.emit(token, "OwnershipTransferred")
-          .withArgs(owner.address, treasuryAddr.address)
-        expect(await token.owner()).to.equal(treasuryAddr.address)
-      })
-
-      it("prevents non-owners from transferring", async function () {
-        await expect(
-          token.connect(addr1).transferOwnership(treasuryAddr.address)
-        ).to.be.revertedWith("caller is not the owner")
-      })
-
-      it("guards ownership against stuck state", async function () {
-        await expect(token.transferOwnership(AddressZero)).to.be.revertedWith(
-          "new owner is the zero address"
-        )
-      })
-    })
-
-    describe("renounce ownership", () => {
-      it("renounce owner", async () => {
-        await expect(token.renounceOwnership())
-          .to.emit(token, "OwnershipTransferred")
-          .withArgs(owner.address, AddressZero)
-        expect(await token.owner()).to.equal(AddressZero)
-      })
-
-      it("renounce non owner", async () => {
-        await expect(token.connect(addr1).renounceOwnership()).to.be.revertedWith(
-          "caller is not the owner"
-        )
-
-        expect(await token.owner()).to.equal(owner.address)
-      })
-    })
-  })
-
-  describe("Transfer - Whitelist DEFAULT OFF", () => {
+  describe("Transfer", () => {
     it("Should transfer tokens between accounts", async () => {
       // Transfer 50 tokens from owner to addr1
       const amountOfTokens = 50
@@ -221,7 +172,7 @@ describe("Token", async () => {
     })
   })
 
-  describe("Approvals - Whitelist DEFAULT OFF", () => {
+  describe("Approvals", () => {
     describe("when the spender has enough approved balance", () => {
       beforeEach(async () => {
         let spender = addr2
@@ -315,263 +266,6 @@ describe("Token", async () => {
     })
   })
 
-  describe("Transactions - Whitelist ENABLED but EMPTY", () => {
-    // Should be the same as no white list (but higher gas costs)
-
-    beforeEach(async () => {
-      await token.useWhitelist(true)
-    })
-
-    it("Should transfer tokens between accounts", async () => {
-      // Transfer 50 tokens from owner to addr1
-      await token.transfer(addr1.address, 50)
-      const addr1Balance = await token.balanceOf(addr1.address)
-      expect(addr1Balance).to.equal(50)
-
-      // Transfer 50 tokens from addr1 to addr2
-      // We use .connect(signer) to send a transaction from another account
-      await token.connect(addr1).transfer(addr2.address, 50)
-      const addr2Balance = await token.balanceOf(addr2.address)
-      expect(addr2Balance).to.equal(50)
-    })
-  })
-
-  describe("Checking WhiteLister controls", () => {
-    describe("transfer whitelister", () => {
-      it("changes whitelist after transfer", async () => {
-        await expect(token.transferWhitelister(treasuryAddr.address))
-          .to.emit(token, "WhitelisterTransferred")
-          .withArgs(owner.address, treasuryAddr.address)
-      })
-
-      it("prevents non-owners from transferring whitelist", async () => {
-        await expect(
-          token.connect(addr1).transferWhitelister(treasuryAddr.address)
-        ).to.be.revertedWith("Caller is not the whitelister")
-      })
-
-      it("guards whitelist ownership against stuck state", async () => {
-        await expect(token.transferWhitelister(AddressZero)).to.be.revertedWith(
-          "New whitelister is the zero address"
-        )
-      })
-    })
-
-    describe("renounce ownership", () => {
-      it("renounce owner", async () => {
-        await expect(token.renounceWhitelister())
-          .to.emit(token, "WhitelisterTransferred")
-          .withArgs(owner.address, AddressZero)
-      })
-
-      it("renounce non owner", async () => {
-        await expect(token.connect(addr1).renounceWhitelister()).to.be.revertedWith(
-          "Caller is not the whitelister"
-        )
-      })
-    })
-  })
-
-  describe("Transactions - Whitelist POPULATED", () => {
-    // Should be the same as no white list (but reduced gas costs)
-
-    beforeEach(async () => {
-      await token.useWhitelist(true)
-      const idoAllotment = 125000000
-
-      await token.transferWhitelister(idoAddr.address)
-      await token.approve(idoAddr.address, idoAllotment)
-    })
-
-    it("Should reject bad whiteList data", async () => {
-      let durations = [1200]
-      let amountsMax = [1000000, 10]
-      // number of durations and amounts need to match
-      await expect(
-        token.connect(idoAddr).createLGEWhitelist(addr1.address, durations, amountsMax)
-      ).to.be.revertedWith("revert Invalid whitelist(s)")
-    })
-
-    it("transferring tokens to the ido address begins the LGE", async () => {
-      // Array length, is the number of rounds.
-      let durations = [1200000] //time in seconds
-      let amountsMax = [1000000] //tokens available
-
-      // number of durations and amounts need to match (set white list on this address (only one address for whitelisting transfers))
-      await token.connect(idoAddr).createLGEWhitelist(idoAddr.address, durations, amountsMax)
-
-      // Set who can access the whitelist round
-      const addresses = [
-        pairAddr.address,
-        idoAddr.address,
-        owner.address,
-        addr1.address,
-        addr2.address,
-      ]
-      await token.connect(idoAddr).modifyLGEWhitelist(0, 1200, 50000000, addresses, true)
-
-      // activate LGE (ido account can enableß)
-      await token.connect(idoAddr).transferFrom(owner.address, idoAddr.address, 1000000)
-
-      // console.log("getLGEWhitelistRound", await token.getLGEWhitelistRound());
-      // Does a valid whitelist transaction
-      await token.connect(idoAddr).transfer(addr2.address, 1000)
-      expect(await token.balanceOf(addr2.address)).to.equal(1000)
-
-      // Whitelisting only applies to the idoAdd address
-      await expect(token.connect(idoAddr).transfer(addr3.address, 1000)).to.be.revertedWith(
-        "Buyer is not whitelisted"
-      )
-
-      // other accounts can still transfer
-      await expect(token.connect(addr2).transfer(addr3.address, 100)).to.not.be.reverted
-      await expect(token.transfer(addr3.address, 100)).to.not.be.reverted
-    })
-
-    it("DISABLE WHITELISTING - transferring tokens to the ido address begins the LGE", async () => {
-      //DISABLE WHITELISTING
-
-      await token.useWhitelist(false)
-      // Array length, is the number of rounds.
-      let durations = [1200] //time in seconds
-      let amountsMax = [1000000] //tokens available
-
-      // number of durations and amounts need to match (set white list on this address (only one address for whitelisting transfers))
-      await token.connect(idoAddr).createLGEWhitelist(idoAddr.address, durations, amountsMax)
-
-      // Set who can access the whitelist round
-      const addresses = [
-        pairAddr.address,
-        idoAddr.address,
-        owner.address,
-        addr1.address,
-        addr2.address,
-      ]
-      await token.connect(idoAddr).modifyLGEWhitelist(0, 1200, 50000000, addresses, true)
-
-      // activate LGE (ido account can enableß)
-      await token.connect(idoAddr).transferFrom(owner.address, idoAddr.address, 1000000)
-
-      // console.log("getLGEWhitelistRound", await token.getLGEWhitelistRound());
-      // Does a valid whitelist transaction
-      await token.connect(idoAddr).transfer(addr2.address, 1000)
-      expect(await token.balanceOf(addr2.address)).to.equal(1000)
-
-      // Whitelisting only applies to the idoAdd address (DISABLE WHITELISTING)
-      await expect(token.connect(idoAddr).transfer(addr3.address, 1000)).to.not.be.reverted
-
-      // other accounts can still transfer
-      await expect(token.connect(addr2).transfer(addr3.address, 100)).to.not.be.reverted
-      await expect(token.transfer(addr3.address, 100)).to.not.be.reverted
-    })
-
-    it("when the whitelist round is over, getLGEWhitelistRound returns 0", async () => {
-      let durations = [1200] //time in seconds
-      let amountsMax = [1000000] //tokens available
-
-      // number of durations and amounts need to match (set white list on this address (only one address for whitelisting transfers))
-      await token.connect(idoAddr).createLGEWhitelist(idoAddr.address, durations, amountsMax)
-
-      // activate LGE (ido account can enable)
-      await token.connect(idoAddr).transferFrom(owner.address, idoAddr.address, 1000000)
-
-      let data = await token.getLGEWhitelistRound()
-      await expect(token.connect(idoAddr).transfer(addr3.address, 1000)).to.be.reverted
-      expect(data[0]).to.be.equal(1)
-      await increaseTime(1201)
-      // Check that the white list expiry is working
-      data = await token.getLGEWhitelistRound()
-      // console.log("getLGEWhitelistRound", data);
-      expect(data[0]).to.be.equal(BigNumber.from(0))
-      await expect(token.connect(idoAddr).transfer(addr3.address, 1000)).to.not.be.reverted
-    })
-
-    it("whitelist modification testing", async () => {
-      // Array length, is the number of rounds.
-      let durations = [1200000] //time in seconds
-      let amountsMax = [1000000] //tokens available
-
-      // number of durations and amounts need to match (set white list on this address (only one address for whitelisting transfers))
-      await token.connect(idoAddr).createLGEWhitelist(idoAddr.address, durations, amountsMax)
-
-      // Set who can access the whitelist round
-      let addresses = [
-        pairAddr.address,
-        idoAddr.address,
-        owner.address,
-        addr1.address,
-        addr2.address,
-      ]
-      await token.connect(idoAddr).modifyLGEWhitelist(0, 1200, 50000000, addresses, true)
-
-      // activate LGE (ido account can enableß)
-      await token.connect(idoAddr).transferFrom(owner.address, idoAddr.address, 1000000)
-
-      // console.log("getLGEWhitelistRound", await token.getLGEWhitelistRound());
-      // Does a valid whitelist transaction
-      await token.connect(idoAddr).transfer(addr2.address, 1000)
-      expect(await token.balanceOf(addr2.address)).to.equal(1000)
-
-      // Whitelisting only applies to the idoAdd address
-      await expect(token.connect(idoAddr).transfer(addr3.address, 1000)).to.be.revertedWith(
-        "Buyer is not whitelisted"
-      )
-
-      // other accounts can still transfer
-      await expect(token.connect(addr2).transfer(addr3.address, 100)).to.not.be.reverted
-      await expect(token.transfer(addr3.address, 100)).to.not.be.reverted
-
-      // Set who can access the whitelist round (turn off access to addr2)
-      addresses = [addr2.address]
-      await token.connect(idoAddr).modifyLGEWhitelist(0, 1200, 50000000, addresses, false)
-
-      // Whitelisting only applies to the idoAdd address
-      await expect(token.connect(idoAddr).transfer(addr1.address, 1000)).to.not.be.reverted
-      await expect(token.connect(idoAddr).transfer(addr2.address, 1000)).to.be.revertedWith(
-        "Buyer is not whitelisted"
-      )
-      await expect(token.connect(idoAddr).transfer(addr3.address, 1000)).to.be.revertedWith(
-        "Buyer is not whitelisted"
-      )
-    })
-
-    it("whitelist amountsMax spending testing", async () => {
-      // Array length, is the number of rounds.
-      let durations = [1200] //time in seconds
-      let amountsMax = [150] //tokens available
-
-      // number of durations and amounts need to match (set white list on this address (only one address for whitelisting transfers))
-      await token.connect(idoAddr).createLGEWhitelist(idoAddr.address, durations, amountsMax)
-
-      // Set who can access the whitelist round
-      let addresses = [
-        pairAddr.address,
-        idoAddr.address,
-        owner.address,
-        addr1.address,
-        addr2.address,
-      ]
-      await token.connect(idoAddr).modifyLGEWhitelist(0, 1200, 150, addresses, true)
-      // activate LGE (ido account can enableß)
-      await token.connect(idoAddr).transferFrom(owner.address, idoAddr.address, 1000000)
-
-      await expect(token.connect(idoAddr).transfer(addr1.address, 1000)).to.be.revertedWith(
-        "Amount exceeds whitelist maximum"
-      )
-      await expect(token.connect(idoAddr).transfer(addr1.address, 100)).to.not.be.reverted
-
-      addresses = [addr2.address]
-      await token.connect(idoAddr).modifyLGEWhitelist(0, 1200, 500, addresses, true)
-      // 100 + 300 < 500
-      await expect(token.connect(idoAddr).transfer(addr1.address, 200)).to.not.be.reverted
-      // 100 + 300 > 300 (so no more transactions)
-      await token.connect(idoAddr).modifyLGEWhitelist(0, 1200, 300, addresses, true)
-      await expect(token.connect(idoAddr).transfer(addr1.address, 20)).to.be.revertedWith(
-        "Amount exceeds whitelist maximum"
-      )
-    })
-  })
-
   describe("Token burning", () => {
     it("Should burn token decreasing supply", async () => {
       const startTotalSupply = await token.totalSupply()
@@ -590,7 +284,7 @@ describe("Token", async () => {
     it("Should prevent token burning when the caller does not have funds to burn", async () => {
       const amountOfTokens = BigNumber.from("100000")
       await expect(token.connect(addr1).burn(amountOfTokens)).to.be.revertedWith(
-        "BEP20: burn amount exceeds balance"
+        "ERC20: burn amount exceeds balance"
       )
     })
 
@@ -612,7 +306,7 @@ describe("Token", async () => {
     it("Should prevent burning from an unauthorized third party", async () => {
       const amountOfTokens = BigNumber.from("100000")
       await expect(token.connect(addr1).burnFrom(owner.address, amountOfTokens)).to.be.revertedWith(
-        "BEP20: burn amount exceeds allowance"
+        "ERC20: burn amount exceeds allowance"
       )
     })
   })
