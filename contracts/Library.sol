@@ -1,12 +1,9 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.0;
+pragma solidity 0.8.2;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/presets/ERC20PresetMinterPauserUpgradeable.sol";
 
 contract token is ERC20PresetMinterPauserUpgradeable {
-    string private _updateableName;
-    string private _updateableSymbol;
-
     struct TransferData {
         address recipient;
         uint256 amount;
@@ -17,10 +14,8 @@ contract token is ERC20PresetMinterPauserUpgradeable {
         string memory _symbol,
         uint256 totalSupply
     ) public virtual initializer {
-        __ERC20PresetMinterPauser_init("", "");
-        _updateableName = _name;
-        _updateableSymbol = _symbol;
-        _mint(msg.sender, totalSupply);
+        __ERC20PresetMinterPauser_init(_name, _symbol);
+        _mint(_msgSender(), totalSupply);
     }
 
     /**
@@ -28,31 +23,10 @@ contract token is ERC20PresetMinterPauserUpgradeable {
      * and makes "data.length" transactions
      */
     function batchTransfer(TransferData[] calldata data) external {
+        address sender = _msgSender();
         for (uint256 i = 0; i < data.length; i++) {
-            _transfer(msg.sender, data[i].recipient, data[i].amount);
+            _transfer(sender, data[i].recipient, data[i].amount);
         }
-    }
-
-    function name() public override view returns (string memory) {
-        return _updateableName;
-    }
-
-    function symbol() public override view returns (string memory) {
-        return _updateableSymbol;
-    }
-
-    function updateName(string memory _newName)
-        public
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        _updateableName = _newName;
-    }
-
-    function updateSymbol(string memory _newSymbol)
-        public
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        _updateableSymbol = _newSymbol;
     }
 }
 
